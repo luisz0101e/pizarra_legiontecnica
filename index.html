@@ -95,6 +95,7 @@
             </select>
         </div>
         <div class="header-btns">
+            <button id="btnInstall" style="display: none; background: #FFD700; color: black; font-weight: bold; border: none; padding: 8px 10px; border-radius: 5px; cursor: pointer; box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);">📲 Instalar App</button>
             <button class="btn-sim" id="btnSimulador" onclick="toggleSimulador()">🤖 Simulador</button>
             <button class="btn-draw" id="btnDibujar" onclick="toggleDibujo()">✏️ Pizarra Libre</button>
             <button onclick="openEditor()">⚙️ Edit</button>
@@ -398,6 +399,12 @@
             editModal.style.display = 'flex';
         }
         function closeEditor() { editModal.style.display = 'none'; }
+        
+        // --- FUNCIÓN QUE FALTABA PARA GUARDAR LA PLANTILLA ---
+        function guardarDatos() {
+            localStorage.setItem('equipoTactica', JSON.stringify(jugadores));
+        }
+
         function saveEdits() {
             const rows = document.querySelectorAll('.edit-row'); let nuevosJugadores = [];
             rows.forEach((row, i) => { nuevosJugadores.push({ id: document.getElementById(`edit-id-${i}`).value, nombre: document.getElementById(`edit-nom-${i}`).value, pos: document.getElementById(`edit-pos-${i}`).value, rol: document.getElementById(`edit-rol-${i}`).value }); });
@@ -405,6 +412,34 @@
         }
 
         window.onload = cambiarFormacion;
+
+        // --- MAGIA PARA FORZAR LA INSTALACIÓN DE LA PWA ---
+        let deferredPrompt;
+        const btnInstall = document.getElementById('btnInstall');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Evita que Chrome muestre el mini-mensaje automático abajo
+            e.preventDefault();
+            // Guarda el evento para que podamos lanzarlo cuando el usuario toque el botón
+            deferredPrompt = e;
+            // Muestra nuestro botón dorado en la cabecera
+            btnInstall.style.display = 'block';
+        });
+
+        btnInstall.addEventListener('click', async () => {
+            if (deferredPrompt !== null) {
+                // Muestra la ventana nativa de instalación de Android
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('El usuario aceptó instalar la app');
+                }
+                // Limpia la variable y oculta el botón
+                deferredPrompt = null;
+                btnInstall.style.display = 'none';
+            }
+        });
+
     </script>
 </body>
 </html>
