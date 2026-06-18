@@ -1,6 +1,10 @@
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open('pizarra-v1').then((cache) => cache.addAll(['./index.html', './manifest.json']))
+    caches.open('pizarra-v1').then((cache) => cache.addAll([
+      './',
+      './index.html',
+      './manifest.json'
+    ]))
   );
 });
 
