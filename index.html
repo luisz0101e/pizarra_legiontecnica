@@ -38,14 +38,17 @@
         .btn-sim { background: #008080 !important; font-weight: bold; }
         .btn-sim.active { background: #00FFCC !important; color: black; box-shadow: 0 0 10px #00FFCC;}
         
-        .draw-tools { display: none; background: #222; padding: 8px; justify-content: center; align-items: center; gap: 15px; border-bottom: 1px solid #444; z-index: 10; font-size: 0.85rem; color: #aaa;}
+        /* BARRA DE HERRAMIENTAS MEJORADA PARA MÓVILES */
+        .draw-tools { display: none; background: #222; padding: 10px 8px; justify-content: center; align-items: center; gap: 10px; border-bottom: 1px solid #444; z-index: 10; font-size: 0.85rem; color: #aaa; flex-wrap: wrap; }
         .draw-tools.active { display: flex; }
-        .pencil-toggle { background: #333; border: 1px solid #555; color: white; padding: 5px 15px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        #toolHelperText { width: 100%; text-align: center; color: #00FFCC; font-size: 0.8rem; margin-bottom: 2px; }
+        
+        .pencil-toggle { background: #333; border: 1px solid #555; color: white; padding: 6px 15px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;}
         .pencil-toggle.rojo { border-color: #FF6666; color: #FF6666; }
         .pencil-toggle.amarillo { border-color: #FFD700; color: #FFD700; }
         
-        .history-controls { display: flex; gap: 10px; background: #111; padding: 5px 15px; border-radius: 20px; border: 1px solid #444; }
-        .history-btn { background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; padding: 0 5px;}
+        .history-controls { display: flex; gap: 10px; background: #111; padding: 6px 15px; border-radius: 20px; border: 1px solid #444; }
+        .history-btn { background: none; border: none; color: white; font-size: 1rem; cursor: pointer; padding: 0 5px;}
         .history-btn:disabled { color: #444; cursor: not-allowed; }
 
         .pitch-container { flex: 1; position: relative; background: var(--pitch-green); background-image: repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.05) 10%, rgba(0,0,0,0.05) 20%); border: 2px solid var(--pitch-lines); margin: 10px; border-radius: 8px; overflow: hidden; touch-action: none;}
@@ -57,7 +60,7 @@
         #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
         #soccerBall { position: absolute; font-size: 26px; width: 30px; height: 30px; display: none; align-items: center; justify-content: center; transform: translate(-50%, -50%); z-index: 60; text-shadow: 0px 3px 5px rgba(0,0,0,0.6); left: 50%; top: 50%; transition: top 0.4s ease, left 0.4s ease;}
         
-        .player-shirt { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 60px; transition: top 0.6s ease, left 0.6s ease; z-index: 20; }
+        .player-shirt { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 60px; transition: top 0.6s ease, left 0.6s ease, box-shadow 0.3s ease; z-index: 20; border-radius: 10px; }
         .shirt-icon { width: 35px; height: 35px; background: white; color: black; border-radius: 8px 8px 4px 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 2px solid #ccc; }
         .gk .shirt-icon { background: #FFD700; border-color: #DAA520; }
         .player-name { background: rgba(0,0,0,0.7); font-size: 9px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -72,8 +75,16 @@
         .sidebar-header { padding: 15px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
         .close-btn { background: none; color: white; border: none; font-size: 1.5rem; cursor: pointer; }
         .subs-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .sub-card { background: #333; padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #555; }
-        .btn-cambio { background: #2A803A; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        
+        /* TARJETAS DE SUPLENTES MEJORADAS */
+        .sub-card { background: #333; padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #555; cursor: pointer; transition: background 0.2s;}
+        .sub-card:active { background: #444; }
+        .sub-dorsal { background: white; color: black; font-weight: bold; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        .sub-info { display: flex; flex-direction: column; justify-content: center; }
+        .sub-name { font-weight: bold; font-size: 0.95rem; }
+        .sub-pos { font-size: 0.75rem; color: #aaa; }
+        
+        .btn-cambio { background: #2A803A; color: white; border: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; }
         .modal { background: #222; width: 95%; max-width: 500px; max-height: 90%; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #444;}
@@ -104,12 +115,12 @@
     </div>
 
     <div class="draw-tools" id="drawTools">
+        <div id="toolHelperText">Toca el césped para dibujar.</div>
         <div class="history-controls" id="historyControls">
-            <button class="history-btn" id="btnUndo" onclick="undoStep()" disabled>⏪ Retroceder</button>
+            <button class="history-btn" id="btnUndo" onclick="undoStep()" disabled>⏪</button>
             <span style="color:#555">|</span>
-            <button class="history-btn" id="btnRedo" onclick="redoStep()" disabled>Adelantar ⏩</button>
+            <button class="history-btn" id="btnRedo" onclick="redoStep()" disabled>⏩</button>
         </div>
-        <span id="toolHelperText">Toca el césped para dibujar.</span>
         <button class="pencil-toggle rojo" id="btnColor" onclick="toggleColor()">Lápiz Rojo</button>
         <button class="pencil-toggle" style="background:#555; color:white; border:none;" onclick="clearCanvas(true)">🗑️ Limpiar</button>
     </div>
@@ -371,16 +382,35 @@
         const sidebar = document.getElementById('sidebar'); const subsListEl = document.getElementById('subsList');
         function openSidebar(filterPos = null) { if(drawModeActive || simuladorActive) return; sidebar.classList.add('open'); renderSubs(filterPos); }
         function closeSidebar() { sidebar.classList.remove('open'); }
+        
+        // --- FUNCIÓN MEJORADA PARA MOSTRAR SUPLENTES Y RESALTAR POSICIÓN ---
         function renderSubs(filterPos) {
             subsListEl.innerHTML = ''; let suplentes = jugadores.filter(j => j.rol === 'Suplente');
             if (filterPos) suplentes = suplentes.filter(j => j.pos === filterPos);
             suplentes.forEach(sub => {
                 const card = document.createElement('div'); card.className = 'sub-card'; 
-                let btnHtml = filterPos ? `<button class="btn-cambio" onclick="hacerCambio(${sub.id}, '${filterPos}')">Entrar</button>` : '';
-                card.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><div class="sub-dorsal">${sub.id}</div><div class="sub-name">${sub.nombre} <div class="sub-pos">${sub.pos}</div></div></div>${btnHtml}`;
+                let btnHtml = filterPos ? `<button class="btn-cambio" onclick="event.stopPropagation(); hacerCambio(${sub.id}, '${filterPos}')">Entrar</button>` : '';
+                card.innerHTML = `<div style="display:flex; align-items:center; gap:12px;"><div class="sub-dorsal">${sub.id}</div><div class="sub-info"><div class="sub-name">${sub.nombre}</div> <div class="sub-pos">${sub.pos}</div></div></div>${btnHtml}`;
+                
+                // Efecto de iluminación en la cancha al tocar un suplente
+                card.onclick = () => {
+                    closeSidebar();
+                    let shirtId = `shirt-${sub.pos.replace(/ /g, '-')}`;
+                    let shirtEl = document.getElementById(shirtId);
+                    if(shirtEl) {
+                        shirtEl.style.boxShadow = "0 0 20px 8px #00FFCC";
+                        shirtEl.style.zIndex = "100";
+                        setTimeout(() => { 
+                            shirtEl.style.boxShadow = "none"; 
+                            shirtEl.style.zIndex = "20"; 
+                        }, 2500);
+                    }
+                };
+
                 subsListEl.appendChild(card);
             });
         }
+
         function hacerCambio(subId, pos) {
             let titular = jugadores.find(j => j.pos === pos && j.rol === 'Titular'); let suplente = jugadores.find(j => j.id === subId);
             if(titular) titular.rol = 'Suplente'; suplente.rol = 'Titular'; suplente.pos = pos; 
@@ -400,7 +430,6 @@
         }
         function closeEditor() { editModal.style.display = 'none'; }
         
-        // --- FUNCIÓN QUE FALTABA PARA GUARDAR LA PLANTILLA ---
         function guardarDatos() {
             localStorage.setItem('equipoTactica', JSON.stringify(jugadores));
         }
@@ -413,33 +442,26 @@
 
         window.onload = cambiarFormacion;
 
-        // --- MAGIA PARA FORZAR LA INSTALACIÓN DE LA PWA ---
         let deferredPrompt;
         const btnInstall = document.getElementById('btnInstall');
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Evita que Chrome muestre el mini-mensaje automático abajo
             e.preventDefault();
-            // Guarda el evento para que podamos lanzarlo cuando el usuario toque el botón
             deferredPrompt = e;
-            // Muestra nuestro botón dorado en la cabecera
             btnInstall.style.display = 'block';
         });
 
         btnInstall.addEventListener('click', async () => {
             if (deferredPrompt !== null) {
-                // Muestra la ventana nativa de instalación de Android
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     console.log('El usuario aceptó instalar la app');
                 }
-                // Limpia la variable y oculta el botón
                 deferredPrompt = null;
                 btnInstall.style.display = 'none';
             }
         });
-
     </script>
 </body>
 </html>
