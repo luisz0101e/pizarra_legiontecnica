@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pizarra Táctica</title>
+
+    <link rel="icon" type="image/png" href="https://drive.google.com/uc?export=view&id=1w4ZVhjCPc4bsDE_0JKe79lm56ojgHFX0">
+    <link rel="apple-touch-icon" href="https://drive.google.com/uc?export=view&id=1w4ZVhjCPc4bsDE_0JKe79lm56ojgHFX0">
+    <meta name="apple-mobile-web-app-title" content="Pizarra Táctica">
+    <meta name="application-name" content="Pizarra Táctica">
+    <meta name="theme-color" content="#1E1E1E">
+    <link rel="manifest" href="./manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('./sw.js');
+        });
+      }
+    </script>
+
+    <style>
+        :root { --pitch-green: #2A803A; --pitch-lines: rgba(255, 255, 255, 0.7); --bg-dark: #1E1E1E; --panel-bg: #2D2D2D; --highlight: #FF3333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        .header { background: #111; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; z-index: 10; flex-wrap: wrap; gap: 5px; }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-title { font-size: 1rem; font-weight: bold; color: #FFD700;}
+        .formacion-select { background: #333; color: white; border: 1px solid #555; padding: 5px; border-radius: 5px; font-weight: bold; font-size: 0.9rem;}
+        
+        .header-btns { display: flex; gap: 5px; flex-wrap: wrap;}
+        .header-btns button { background: #444; color: white; border: none; padding: 8px 10px; border-radius: 5px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .header-btns button:active { background: #666; }
+        .btn-primary { background: #203864 !important; }
+        .btn-draw { background: #8C1919 !important; }
+        .btn-draw.active { background: #FF3333 !important; box-shadow: 0 0 10px #FF3333; }
+        .btn-sim { background: #008080 !important; font-weight: bold; }
+        .btn-sim.active { background: #00FFCC !important; color: black; box-shadow: 0 0 10px #00FFCC;}
+        
+        .draw-tools { display: none; background: #222; padding: 8px; justify-content: center; align-items: center; gap: 15px; border-bottom: 1px solid #444; z-index: 10; font-size: 0.85rem; color: #aaa;}
+        .draw-tools.active { display: flex; }
+        .pencil-toggle { background: #333; border: 1px solid #555; color: white; padding: 5px 15px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px;}
+        .pencil-toggle.rojo { border-color: #FF6666; color: #FF6666; }
+        .pencil-toggle.amarillo { border-color: #FFD700; color: #FFD700; }
+        
+        .history-controls { display: flex; gap: 10px; background: #111; padding: 5px 15px; border-radius: 20px; border: 1px solid #444; }
+        .history-btn { background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; padding: 0 5px;}
+        .history-btn:disabled { color: #444; cursor: not-allowed; }
+
+        .pitch-container { flex: 1; position: relative; background: var(--pitch-green); background-image: repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.05) 10%, rgba(0,0,0,0.05) 20%); border: 2px solid var(--pitch-lines); margin: 10px; border-radius: 8px; overflow: hidden; touch-action: none;}
+        .line-center { position: absolute; top: 50%; width: 100%; height: 2px; background: var(--pitch-lines); }
+        .circle-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px solid var(--pitch-lines); border-radius: 50%; }
+        .area-top { position: absolute; top: 0; left: 20%; width: 60%; height: 15%; border: 2px solid var(--pitch-lines); border-top: none; }
+        .area-bottom { position: absolute; bottom: 0; left: 20%; width: 60%; height: 15%; border: 2px solid var(--pitch-lines); border-bottom: none; }
+        
+        #drawCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; }
+        #soccerBall { position: absolute; font-size: 26px; width: 30px; height: 30px; display: none; align-items: center; justify-content: center; transform: translate(-50%, -50%); z-index: 60; text-shadow: 0px 3px 5px rgba(0,0,0,0.6); left: 50%; top: 50%; transition: top 0.4s ease, left 0.4s ease;}
+        
+        .player-shirt { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 60px; transition: top 0.6s ease, left 0.6s ease; z-index: 20; }
+        .shirt-icon { width: 35px; height: 35px; background: white; color: black; border-radius: 8px 8px 4px 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 2px solid #ccc; }
+        .gk .shirt-icon { background: #FFD700; border-color: #DAA520; }
+        .player-name { background: rgba(0,0,0,0.7); font-size: 9px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .context-menu { display: none; position: absolute; background: rgba(0, 0, 0, 0.9); border: 1px solid #DAA520; border-radius: 8px; z-index: 200; flex-direction: column; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 140px;}
+        .context-menu button { background: none; border: none; color: white; padding: 10px; text-align: left; font-size: 0.85rem; font-weight: bold; border-bottom: 1px solid #333; cursor: pointer; display: flex; align-items: center; gap: 8px;}
+        .context-menu button:hover, .context-menu button:active { background: #333; }
+        .context-menu button:last-child { border-bottom: none; }
+
+        .sidebar { position: fixed; top: 0; right: -100%; width: 85%; max-width: 400px; height: 100%; background: var(--panel-bg); z-index: 100; transition: right 0.3s ease; display: flex; flex-direction: column; box-shadow: -5px 0 15px rgba(0,0,0,0.5); }
+        .sidebar.open { right: 0; }
+        .sidebar-header { padding: 15px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; }
+        .close-btn { background: none; color: white; border: none; font-size: 1.5rem; cursor: pointer; }
+        .subs-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .sub-card { background: #333; padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #555; }
+        .btn-cambio { background: #2A803A; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; justify-content: center; align-items: center; }
+        .modal { background: #222; width: 95%; max-width: 500px; max-height: 90%; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #444;}
+        .modal-header { padding: 15px; background: #111; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;}
+        .modal-body { flex: 1; overflow-y: auto; padding: 15px; }
+        .edit-row { display: flex; gap: 5px; margin-bottom: 10px; background: #333; padding: 8px; border-radius: 5px; flex-wrap: wrap; }
+        .edit-row input, .edit-row select { background: #444; color: white; border: 1px solid #555; padding: 5px; border-radius: 3px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <span class="header-title">⚽ Pizarra Táctica</span>
+            <select class="formacion-select" id="formacionSelector" onchange="cambiarFormacion()">
+                <option value="4-3-3">4-3-3</option>
+                <option value="4-4-2">4-4-2</option>
+                <option value="3-5-2">3-5-2</option>
+            </select>
+        </div>
+        <div class="header-btns">
+            <button class="btn-sim" id="btnSimulador" onclick="toggleSimulador()">🤖 Simulador</button>
+            <button class="btn-draw" id="btnDibujar" onclick="toggleDibujo()">✏️ Pizarra Libre</button>
+            <button onclick="openEditor()">⚙️ Edit</button>
+            <button class="btn-primary" onclick="openSidebar()">📋 Cambios</button>
+        </div>
+    </div>
+
+    <div class="draw-tools" id="drawTools">
+        <div class="history-controls" id="historyControls">
+            <button class="history-btn" id="btnUndo" onclick="undoStep()" disabled>⏪ Retroceder</button>
+            <span style="color:#555">|</span>
+            <button class="history-btn" id="btnRedo" onclick="redoStep()" disabled>Adelantar ⏩</button>
+        </div>
+        <span id="toolHelperText">Toca el césped para dibujar.</span>
+        <button class="pencil-toggle rojo" id="btnColor" onclick="toggleColor()">Lápiz Rojo</button>
+        <button class="pencil-toggle" style="background:#555; color:white; border:none;" onclick="clearCanvas(true)">🗑️ Limpiar</button>
+    </div>
+
+    <div class="pitch-container" id="pitch">
+        <div class="line-center"></div>
+        <div class="circle-center"></div>
+        <div class="area-top"></div>
+        <div class="area-bottom"></div>
+        <canvas id="drawCanvas"></canvas>
+        <div id="soccerBall">⚽</div>
+        
+        <div class="context-menu" id="actionMenu"></div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header"><b id="sidebarTitle">Selecciona suplente:</b><button class="close-btn" onclick="closeSidebar()">&times;</button></div>
+        <div class="subs-list" id="subsList"></div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header"><b>⚙️ Editar Plantilla</b><div><button class="header-btns" style="background:#2A803A; padding:5px 10px; border-radius:5px; border:none; color:white;" onclick="saveEdits()">Guardar</button><button class="header-btns" style="background:#555; padding:5px 10px; border-radius:5px; border:none; color:white; margin-left:5px;" onclick="closeEditor()">Cerrar</button></div></div>
+            <div class="modal-body" id="editList"></div>
+        </div>
+    </div>
+
+    <script>
+        const defaultJugadores = [
+            { id: 1, nombre: 'LITUMA LUIS', pos: 'PORTERO', rol: 'Titular' }, { id: 2, nombre: 'GUARTAZACA MICHAEL', pos: 'LATERAL IZQ', rol: 'Titular' }, { id: 3, nombre: 'GALLO BRANDON', pos: 'EXTREMO DER', rol: 'Titular' }, { id: 4, nombre: 'PESANTEZ ANGEL', pos: 'LATERAL DER', rol: 'Titular' }, { id: 5, nombre: 'ORTIZ VICTOR', pos: 'INTERIOR DER', rol: 'Suplente' }, { id: 6, nombre: 'CAÑAR BRYAN', pos: 'INTERIOR DER', rol: 'Titular' }, { id: 7, nombre: 'PUNIN RONAL', pos: 'PIVOTE (MCD)', rol: 'Suplente' }, { id: 8, nombre: 'GUAZHIMA BRYAN', pos: 'PIVOTE (MCD)', rol: 'Suplente' }, { id: 9, nombre: 'ESTUPIÑAN JAIRO', pos: 'DEF. CENTRAL IZQ', rol: 'Suplente' }, { id: 10, nombre: 'ESTUPIÑAN JORGE', pos: 'DEF. CENTRAL DER', rol: 'Titular' }, { id: 11, nombre: 'JARAMILLO ISRAEL', pos: 'EXTREMO IZQ', rol: 'Titular' }, { id: 12, nombre: 'ARMIJOS ROBERTH', pos: 'INTERIOR IZQ', rol: 'Suplente' }, { id: 13, nombre: 'ARMIJOS CARLOS', pos: 'INTERIOR IZQ', rol: 'Suplente' }, { id: 14, nombre: 'PESANTEZ PABLO', pos: 'DELANTERO CEN', rol: 'Titular' }, { id: 15, nombre: 'SAMANIEGO LEONARDO', pos: 'LATERAL IZQ', rol: 'Suplente' }, { id: 16, nombre: 'PUNIN BRYAN', pos: 'PIVOTE (MCD)', rol: 'Titular' }, { id: 17, nombre: 'VALDIVIESO GREISO', pos: 'DELANTERO CEN', rol: 'Suplente' }, { id: 18, nombre: 'TOLEDO ROMARIO', pos: 'LATERAL IZQ', rol: 'Suplente' }, { id: 19, nombre: 'PEREZ EDILBERTO', pos: 'DEF. CENTRAL IZQ', rol: 'Titular' }, { id: 20, nombre: 'FERNANDEZ BRYAN', pos: 'LATERAL DER', rol: 'Suplente' }, { id: 21, nombre: 'TUITS EDGAR', pos: 'EXTREMO IZQ', rol: 'Suplente' }, { id: 22, nombre: 'ROMERO ALEXIS', pos: 'LATERAL DER', rol: 'Suplente' }, { id: 23, nombre: 'AYUI GEORDY', pos: 'INTERIOR IZQ', rol: 'Titular' }, { id: 24, nombre: 'FLORES ALEXIS', pos: 'EXTREMO IZQ', rol: 'Suplente' }
+        ];
+        let jugadores = JSON.parse(localStorage.getItem('equipoTactica')) || defaultJugadores;
+
+        const formacionesMap = {
+            "4-3-3": { "PORTERO": { x: 50, y: 88, gk: true }, "DEF. CENTRAL IZQ": { x: 35, y: 72, gk: false }, "DEF. CENTRAL DER": { x: 65, y: 72, gk: false }, "LATERAL IZQ": { x: 15, y: 65, gk: false }, "LATERAL DER": { x: 85, y: 65, gk: false }, "PIVOTE (MCD)": { x: 50, y: 50, gk: false }, "INTERIOR IZQ": { x: 30, y: 35, gk: false }, "INTERIOR DER": { x: 70, y: 35, gk: false }, "EXTREMO IZQ": { x: 20, y: 15, gk: false }, "EXTREMO DER": { x: 80, y: 15, gk: false }, "DELANTERO CEN": { x: 50, y: 10, gk: false } },
+            "4-4-2": { "PORTERO": { x: 50, y: 88, gk: true }, "DEF. CENTRAL IZQ": { x: 35, y: 72, gk: false }, "DEF. CENTRAL DER": { x: 65, y: 72, gk: false }, "LATERAL IZQ": { x: 15, y: 65, gk: false }, "LATERAL DER": { x: 85, y: 65, gk: false }, "PIVOTE (MCD)": { x: 35, y: 45, gk: false }, "INTERIOR DER": { x: 65, y: 45, gk: false }, "INTERIOR IZQ": { x: 15, y: 35, gk: false }, "EXTREMO DER": { x: 85, y: 35, gk: false }, "EXTREMO IZQ": { x: 35, y: 15, gk: false }, "DELANTERO CEN": { x: 65, y: 15, gk: false } },
+            "3-5-2": { "PORTERO": { x: 50, y: 88, gk: true }, "DEF. CENTRAL IZQ": { x: 25, y: 72, gk: false }, "PIVOTE (MCD)": { x: 50, y: 75, gk: false }, "DEF. CENTRAL DER": { x: 75, y: 72, gk: false }, "LATERAL IZQ": { x: 15, y: 45, gk: false }, "LATERAL DER": { x: 85, y: 45, gk: false }, "INTERIOR IZQ": { x: 35, y: 40, gk: false }, "INTERIOR DER": { x: 65, y: 40, gk: false }, "EXTREMO DER": { x: 50, y: 30, gk: false }, "EXTREMO IZQ": { x: 35, y: 12, gk: false }, "DELANTERO CEN": { x: 65, y: 12, gk: false } }
+        };
+        const listaPosicionesValidas = Object.keys(formacionesMap["4-3-3"]);
+        let formacionActual = "4-3-3";
+
+        const pitchEl = document.getElementById('pitch');
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const ball = document.getElementById('soccerBall');
+        const actionMenu = document.getElementById('actionMenu');
+        
+        let drawModeActive = false; let simuladorActive = false; let isInteracting = false;
+        let activeElement = null; let draggedNode = null; let colorLapiz = 'rojo'; 
+        let historico = []; let pasoActualIndex = -1;
+        let selectedPlayerNode = null;
+
+        function resizeCanvas() { canvas.width = pitchEl.clientWidth; canvas.height = pitchEl.clientHeight; }
+        window.addEventListener('resize', resizeCanvas);
+
+        function toggleDibujo() {
+            if(simuladorActive) toggleSimulador(); 
+            drawModeActive = !drawModeActive;
+            const btn = document.getElementById('btnDibujar'); const tools = document.getElementById('drawTools');
+            if (drawModeActive) {
+                btn.classList.add('active'); tools.classList.add('active'); ball.style.display = 'flex'; 
+                document.getElementById('toolHelperText').innerText = "Toca el césped para rayar. Arrastra jugadores libres.";
+                document.getElementById('btnColor').style.display = 'flex'; document.getElementById('historyControls').style.display = 'none'; resizeCanvas(); 
+            } else { btn.classList.remove('active'); tools.classList.remove('active'); ball.style.display = 'none'; clearCanvas(); cambiarFormacion(); }
+        }
+
+        function toggleSimulador() {
+            if(drawModeActive) toggleDibujo(); 
+            simuladorActive = !simuladorActive;
+            const btn = document.getElementById('btnSimulador'); const tools = document.getElementById('drawTools');
+            if (simuladorActive) {
+                btn.classList.add('active'); tools.classList.add('active'); ball.style.display = 'flex';
+                document.getElementById('toolHelperText').innerText = "Toca a un jugador para abrir el Menú de Decisiones.";
+                document.getElementById('btnColor').style.display = 'none'; document.getElementById('historyControls').style.display = 'flex';
+                clearCanvas(); iniciarHistorial(); resizeCanvas();
+            } else { btn.classList.remove('active'); tools.classList.remove('active'); ball.style.display = 'none'; clearCanvas(); cambiarFormacion(); actionMenu.style.display='none'; }
+        }
+
+        function toggleColor() {
+            const btn = document.getElementById('btnColor');
+            if(colorLapiz === 'rojo') { colorLapiz = 'amarillo'; btn.className = 'pencil-toggle amarillo'; btn.innerText = 'Lápiz Amarillo'; } 
+            else { colorLapiz = 'rojo'; btn.className = 'pencil-toggle rojo'; btn.innerText = 'Lápiz Rojo'; }
+        }
+
+        function clearCanvas(force=false) { ctx.clearRect(0, 0, canvas.width, canvas.height); if(force && simuladorActive) drawSmartAssistant(); }
+
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX; let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function iniciarHistorial() { historico = []; pasoActualIndex = -1; guardarEstado(); }
+        function guardarEstado() {
+            let estado = { ball: { left: ball.style.left || '50%', top: ball.style.top || '50%' }, jugadores: {} };
+            document.querySelectorAll('.player-shirt').forEach(shirt => { estado.jugadores[shirt.id] = { left: shirt.style.left, top: shirt.style.top }; });
+            historico = historico.slice(0, pasoActualIndex + 1); historico.push(estado); pasoActualIndex++; actualizarBotonesHistorial();
+        }
+        function cargarEstado(estado) {
+            ball.style.left = estado.ball.left; ball.style.top = estado.ball.top;
+            Object.keys(estado.jugadores).forEach(id => { let shirt = document.getElementById(id); if(shirt) { shirt.style.left = estado.jugadores[id].left; shirt.style.top = estado.jugadores[id].top; } });
+            setTimeout(() => { clearCanvas(); drawSmartAssistant(); }, 650); actualizarBotonesHistorial();
+        }
+        function undoStep() { if(pasoActualIndex > 0) { pasoActualIndex--; cargarEstado(historico[pasoActualIndex]); } actionMenu.style.display='none'; }
+        function redoStep() { if(pasoActualIndex < historico.length - 1) { pasoActualIndex++; cargarEstado(historico[pasoActualIndex]); } actionMenu.style.display='none'; }
+        function actualizarBotonesHistorial() { document.getElementById('btnUndo').disabled = (pasoActualIndex <= 0); document.getElementById('btnRedo').disabled = (pasoActualIndex >= historico.length - 1); }
+
+        function abrirMenuAcciones(shirtNode, e) {
+            selectedPlayerNode = shirtNode;
+            const bx = parseFloat(ball.style.left) || 50; const by = parseFloat(ball.style.top) || 50;
+            const px = parseFloat(shirtNode.style.left) || 50; const py = parseFloat(shirtNode.style.top) || 50;
+            const tieneBalon = Math.abs(bx - px) < 3 && Math.abs(by - py) < 3;
+
+            actionMenu.innerHTML = '';
+            
+            if(tieneBalon) {
+                actionMenu.innerHTML += `<button onclick="ejecutarAccion('centro')">🎯 Levantar Centro</button>`;
+                actionMenu.innerHTML += `<button onclick="ejecutarAccion('conduccion')">🏃‍♂️ Conducir (Avanzar)</button>`;
+            } else {
+                actionMenu.innerHTML += `<button onclick="ejecutarAccion('pase')">⚽ Darle el Pase</button>`;
+                actionMenu.innerHTML += `<button onclick="ejecutarAccion('espacio')">🔥 Picar al Espacio</button>`;
+                actionMenu.innerHTML += `<button onclick="ejecutarAccion('corto')">↙️ Pedir en Corto</button>`;
+            }
+
+            actionMenu.innerHTML += `<button onclick="cerrarMenu()" style="color:#aaa;">❌ Cancelar</button>`;
+
+            const rect = pitchEl.getBoundingClientRect();
+            let menuX = (px / 100) * rect.width + 30; 
+            let menuY = (py / 100) * rect.height - 20;
+            if(menuX + 140 > rect.width) menuX = (px / 100) * rect.width - 150;
+            
+            actionMenu.style.left = menuX + 'px'; actionMenu.style.top = menuY + 'px'; actionMenu.style.display = 'flex';
+        }
+
+        function cerrarMenu() { actionMenu.style.display = 'none'; }
+
+        function ejecutarAccion(tipo) {
+            if(!selectedPlayerNode) return;
+            const px = parseFloat(selectedPlayerNode.style.left) || 50; const py = parseFloat(selectedPlayerNode.style.top) || 50;
+            const bx = parseFloat(ball.style.left) || 50; const by = parseFloat(ball.style.top) || 50;
+
+            if (tipo === 'pase') {
+                ball.style.left = px + '%'; ball.style.top = py + '%';
+                calcularMovimientoEquipoBase(px, py); 
+            } else if (tipo === 'espacio') {
+                selectedPlayerNode.style.top = Math.max(5, py - 25) + '%';
+            } else if (tipo === 'corto') {
+                selectedPlayerNode.style.left = ((px + bx) / 2) + '%'; selectedPlayerNode.style.top = ((py + by) / 2) + '%';
+            } else if (tipo === 'centro') {
+                ball.style.left = '50%'; ball.style.top = '15%';
+                let dc = document.getElementById('shirt-DELANTERO-CEN'); let extIzq = document.getElementById('shirt-EXTREMO-IZQ'); let extDer = document.getElementById('shirt-EXTREMO-DER');
+                if(dc) { dc.style.left = '50%'; dc.style.top = '15%'; }
+                if(px > 50 && extIzq) { extIzq.style.left = '40%'; extIzq.style.top = '18%'; }
+                if(px < 50 && extDer) { extDer.style.left = '60%'; extDer.style.top = '18%'; }
+            } else if (tipo === 'conduccion') {
+                let newY = Math.max(5, py - 15);
+                selectedPlayerNode.style.top = newY + '%'; ball.style.top = newY + '%';
+                calcularMovimientoEquipoBase(px, newY); 
+            }
+
+            cerrarMenu(); setTimeout(guardarEstado, 650); setTimeout(drawSmartAssistant, 660); 
+        }
+
+        function calcularMovimientoEquipoBase(ballX_pct, ballY_pct) {
+            const formacionBase = formacionesMap[formacionActual];
+            document.querySelectorAll('.player-shirt').forEach(shirt => {
+                let posName = shirt.id.replace('shirt-', '').replace(/-/g, ' '); let basePos = formacionBase[posName];
+                if(!basePos || basePos.gk) return;
+
+                let shiftX = (ballX_pct - 50) * 0.30; let shiftY = (ballY_pct - 50) * 0.35; 
+                let newX = basePos.x + shiftX; let newY = basePos.y + shiftY;
+                newX = Math.max(5, Math.min(95, newX)); newY = Math.max(5, Math.min(95, newY));
+                
+                if(shirt !== selectedPlayerNode) { shirt.style.left = newX + '%'; shirt.style.top = newY + '%'; }
+            });
+        }
+
+        function drawSmartAssistant() {
+            if(!simuladorActive) return; clearCanvas();
+            const bx = ball.offsetLeft; const by = ball.offsetTop;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+            let w = canvas.width; let h = canvas.height;
+            [0.15, 0.35, 0.65, 0.85].forEach(pct => { ctx.beginPath(); ctx.moveTo(w * pct, 0); ctx.lineTo(w * pct, h); ctx.stroke(); });
+
+            let distancias = [];
+            document.querySelectorAll('.player-shirt').forEach(shirt => {
+                if (shirt.classList.contains('gk') && by < h * 0.7) return; 
+                const px = shirt.offsetLeft; const py = shirt.offsetTop;
+                let dist = Math.sqrt(Math.pow(px - bx, 2) + Math.pow(py - by, 2));
+                if(dist > 25) distancias.push({ px, py, dist }); 
+            });
+            distancias.sort((a, b) => a.dist - b.dist);
+            let apoyos = distancias.slice(0, 3);
+
+            if(apoyos.length === 3) {
+                ctx.beginPath(); ctx.moveTo(apoyos[0].px, apoyos[0].py); ctx.lineTo(apoyos[1].px, apoyos[1].py); ctx.lineTo(apoyos[2].px, apoyos[2].py); ctx.closePath();
+                ctx.fillStyle = 'rgba(0, 255, 204, 0.15)'; ctx.fill();
+                ctx.strokeStyle = 'rgba(0, 255, 204, 0.5)'; ctx.setLineDash([]); ctx.lineWidth = 1; ctx.stroke();
+            }
+
+            apoyos.forEach(jugador => {
+                ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(jugador.px, jugador.py);
+                ctx.strokeStyle = '#00FFCC'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke();
+                ctx.beginPath(); ctx.arc(jugador.px, jugador.py, 20, 0, 2 * Math.PI); ctx.strokeStyle = '#00FFCC'; ctx.stroke();
+            });
+        }
+
+        function handleStart(e) {
+            if (!drawModeActive && !simuladorActive) return;
+            const touchX = e.touches ? e.touches[0].clientX : e.clientX; const touchY = e.touches ? e.touches[0].clientY : e.clientY;
+            const target = document.elementFromPoint(touchX, touchY);
+
+            if(actionMenu.style.display === 'flex' && !target.closest('.context-menu')) { cerrarMenu(); if(simuladorActive) return; }
+            if (simuladorActive && target && target.closest('.player-shirt')) { abrirMenuAcciones(target.closest('.player-shirt'), e); e.preventDefault(); return; }
+            if (target && (target.id === 'soccerBall' || target.closest('#soccerBall'))) { activeElement = 'ball'; ball.style.transition = 'none'; e.preventDefault(); isInteracting = true;
+            } else if (drawModeActive && target && target.closest('.player-shirt')) { activeElement = 'player'; draggedNode = target.closest('.player-shirt'); draggedNode.style.transition = 'none'; draggedNode.style.zIndex = 100; e.preventDefault(); isInteracting = true;
+            } else if (drawModeActive) { activeElement = 'draw'; const pos = getPointerPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); e.preventDefault(); isInteracting = true; }
+        }
+
+        function handleMove(e) {
+            if (!isInteracting) return;
+            const pos = getPointerPos(e);
+            if (activeElement === 'ball') { ball.style.left = pos.x + 'px'; ball.style.top = pos.y + 'px'; e.preventDefault(); } 
+            else if (activeElement === 'player' && draggedNode) { draggedNode.style.left = pos.x + 'px'; draggedNode.style.top = pos.y + 'px'; e.preventDefault(); } 
+            else if (activeElement === 'draw') {
+                ctx.lineTo(pos.x, pos.y);
+                if(colorLapiz === 'rojo') { ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 4; ctx.setLineDash([]); } else { ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3; ctx.setLineDash([10, 10]); }
+                ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); e.preventDefault();
+            }
+        }
+
+        function handleEnd() {
+            isInteracting = false;
+            if (draggedNode) { draggedNode.style.zIndex = 20; draggedNode.style.transition = 'top 0.6s ease, left 0.6s ease'; draggedNode = null; }
+            if(activeElement === 'ball') ball.style.transition = 'top 0.4s ease, left 0.4s ease';
+            activeElement = null;
+        }
+
+        pitchEl.addEventListener('mousedown', handleStart); window.addEventListener('mousemove', handleMove); window.addEventListener('mouseup', handleEnd);
+        pitchEl.addEventListener('touchstart', handleStart, {passive: false}); window.addEventListener('touchmove', handleMove, {passive: false}); window.addEventListener('touchend', handleEnd);
+
+        function cambiarFormacion() {
+            formacionActual = document.getElementById('formacionSelector').value;
+            pitchEl.querySelectorAll('.player-shirt').forEach(e => e.remove());
+            const posiciones = formacionesMap[formacionActual];
+
+            Object.keys(posiciones).forEach(pos => {
+                const info = posiciones[pos]; const titular = jugadores.find(j => j.pos === pos && j.rol === 'Titular');
+                const div = document.createElement('div');
+                div.className = `player-shirt ${info.gk ? 'gk' : ''}`; div.id = `shirt-${pos.replace(/ /g, '-')}`;
+                div.style.left = `${info.x}%`; div.style.top = `${info.y}%`;
+                div.onclick = (e) => { if(!drawModeActive && !simuladorActive && !isInteracting) openSidebar(pos); };
+                div.innerHTML = `<div class="shirt-icon">${titular ? titular.id : '-'}</div><div class="player-name">${titular ? titular.nombre.split(' ')[0] : pos}</div>`;
+                pitchEl.appendChild(div);
+            });
+            setTimeout(resizeCanvas, 100);
+        }
+
+        const sidebar = document.getElementById('sidebar'); const subsListEl = document.getElementById('subsList');
+        function openSidebar(filterPos = null) { if(drawModeActive || simuladorActive) return; sidebar.classList.add('open'); renderSubs(filterPos); }
+        function closeSidebar() { sidebar.classList.remove('open'); }
+        function renderSubs(filterPos) {
+            subsListEl.innerHTML = ''; let suplentes = jugadores.filter(j => j.rol === 'Suplente');
+            if (filterPos) suplentes = suplentes.filter(j => j.pos === filterPos);
+            suplentes.forEach(sub => {
+                const card = document.createElement('div'); card.className = 'sub-card'; 
+                let btnHtml = filterPos ? `<button class="btn-cambio" onclick="hacerCambio(${sub.id}, '${filterPos}')">Entrar</button>` : '';
+                card.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><div class="sub-dorsal">${sub.id}</div><div class="sub-name">${sub.nombre} <div class="sub-pos">${sub.pos}</div></div></div>${btnHtml}`;
+                subsListEl.appendChild(card);
+            });
+        }
+        function hacerCambio(subId, pos) {
+            let titular = jugadores.find(j => j.pos === pos && j.rol === 'Titular'); let suplente = jugadores.find(j => j.id === subId);
+            if(titular) titular.rol = 'Suplente'; suplente.rol = 'Titular'; suplente.pos = pos; 
+            guardarDatos(); cambiarFormacion(); closeSidebar();
+        }
+
+        const editModal = document.getElementById('editModal'); const editList = document.getElementById('editList');
+        function openEditor() {
+            editList.innerHTML = '';
+            jugadores.sort((a,b) => parseInt(a.id) - parseInt(b.id)).forEach((j, index) => {
+                let posOptions = listaPosicionesValidas.map(p => `<option value="${p}" ${j.pos === p ? 'selected' : ''}>${p}</option>`).join('');
+                const row = document.createElement('div'); row.className = 'edit-row';
+                row.innerHTML = `<input type="number" class="inp-dorsal" id="edit-id-${index}" value="${j.id}"><input type="text" class="inp-nombre" id="edit-nom-${index}" value="${j.nombre}"><select class="inp-pos" id="edit-pos-${index}">${posOptions}</select><select class="inp-rol" id="edit-rol-${index}"><option value="Titular" ${j.rol === 'Titular' ? 'selected' : ''}>Titular</option><option value="Suplente" ${j.rol === 'Suplente' ? 'selected' : ''}>Suplente</option></select>`;
+                editList.appendChild(row);
+            });
+            editModal.style.display = 'flex';
+        }
+        function closeEditor() { editModal.style.display = 'none'; }
+        function saveEdits() {
+            const rows = document.querySelectorAll('.edit-row'); let nuevosJugadores = [];
+            rows.forEach((row, i) => { nuevosJugadores.push({ id: document.getElementById(`edit-id-${i}`).value, nombre: document.getElementById(`edit-nom-${i}`).value, pos: document.getElementById(`edit-pos-${i}`).value, rol: document.getElementById(`edit-rol-${i}`).value }); });
+            jugadores = nuevosJugadores; guardarDatos(); cambiarFormacion(); closeEditor(); alert("¡Plantilla guardada!");
+        }
+
+        window.onload = cambiarFormacion;
+    </script>
+</body>
+</html>
